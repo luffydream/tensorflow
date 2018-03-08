@@ -52,13 +52,13 @@ expanded states.
   <tr>
     <td style="width: 50%;">
       Initial view of top-level name scope <code>pool_1</code>. Clicking on the orange <code>+</code> button on the top right or double-clicking on the node itself will expand it.
-      </td>
-     <td style="width: 50%;">
-       Expanded view of <code>pool_1</code> name scope. Clicking on the orange <code>-</code> button on the top right or double-clicking on the node itself will collapse the name scope.
-       </td>
-   </tr>
- </table>
- 
+    </td>
+    <td style="width: 50%;">
+      Expanded view of <code>pool_1</code> name scope. Clicking on the orange <code>-</code> button on the top right or double-clicking on the node itself will collapse the name scope.
+    </td>
+  </tr>
+</table>
+
 Grouping nodes by name scopes is critical to making a legible graph. If you're
 building a model, name scopes give you control over the resulting visualization.
 **The better your name scopes, the better your visualization.**
@@ -87,22 +87,22 @@ and the auxiliary area.
 <table width="100%;">
   <tr>
     <td style="width: 50%;">
-       <img src="https://www.tensorflow.org/images/conv_1.png" alt="conv_1 is part of the main graph" title="conv_1 is part of the main graph" />
-     </td>
-     <td style="width: 50%;">
-       <img src="https://www.tensorflow.org/images/save.png" alt="save is extracted as auxiliary node" title="save is extracted as auxiliary node" />
-     </td>
-    </tr>
-   <tr>
-     <td style="width: 50%;">
-       Node <code>conv_1</code> is connected to <code>save</code>. Note the little <code>save</code> node icon on its right.
-       </td>
-     <td style="width: 50%;">
-       <code>save</code> has a high degree, and will appear as an auxiliary node. The connection with <code>conv_1</code> is shown as a node icon on its left. To further reduce clutter, since <code>save</code> has a lot of connections, we show the first 5 and abbreviate the others as <code>... 12 more</code>.
-      </td>
+      <img src="https://www.tensorflow.org/images/conv_1.png" alt="conv_1 is part of the main graph" title="conv_1 is part of the main graph" />
+    </td>
+    <td style="width: 50%;">
+      <img src="https://www.tensorflow.org/images/save.png" alt="save is extracted as auxiliary node" title="save is extracted as auxiliary node" />
+    </td>
+  </tr>
+  <tr>
+    <td style="width: 50%;">
+      Node <code>conv_1</code> is connected to <code>save</code>. Note the little <code>save</code> node icon on its right.
+    </td>
+    <td style="width: 50%;">
+      <code>save</code> has a high degree, and will appear as an auxiliary node. The connection with <code>conv_1</code> is shown as a node icon on its left. To further reduce clutter, since <code>save</code> has a lot of connections, we show the first 5 and abbreviate the others as <code>... 12 more</code>.
+    </td>
   </tr>
 </table>
- 
+
 One last structural simplification is *series collapsing*. Sequential
 motifs--that is, nodes whose names differ by a number at the end and have
 isomorphic structures--are collapsed into a single *stack* of nodes, as shown
@@ -112,21 +112,21 @@ with hierarchical nodes, double-clicking expands the series. See
 specific set of nodes.
 
 <table width="100%;">
-   <tr>
-     <td style="width: 50%;">
-       <img src="https://www.tensorflow.org/images/series.png" alt="Sequence of nodes" title="Sequence of nodes" />
-     </td>
-     <td style="width: 50%;">
-       <img src="https://www.tensorflow.org/images/series_expanded.png" alt="Expanded sequence of nodes" title="Expanded sequence of nodes" />
+  <tr>
+    <td style="width: 50%;">
+      <img src="https://www.tensorflow.org/images/series.png" alt="Sequence of nodes" title="Sequence of nodes" />
+    </td>
+    <td style="width: 50%;">
+      <img src="https://www.tensorflow.org/images/series_expanded.png" alt="Expanded sequence of nodes" title="Expanded sequence of nodes" />
     </td>
   </tr>
   <tr>
     <td style="width: 50%;">
-     A collapsed view of a node sequence.
-      </td>
+      A collapsed view of a node sequence.
+    </td>
     <td style="width: 50%;">
       A small piece of the expanded view, after double-click.
-      </td>
+    </td>
   </tr>
 </table>
 
@@ -159,24 +159,24 @@ about it and the nodes it connects to will appear in the info card at upper
 right corner of the visualization.
 
 <table width="100%;">
-   <tr>
-     <td style="width: 50%;">
-       <img src="https://www.tensorflow.org/images/infocard.png" alt="Info card of a name scope" title="Info card of a name scope" />
-     </td>
-     <td style="width: 50%;">
-       <img src="https://www.tensorflow.org/images/infocard_op.png" alt="Info card of operation node" title="Info card of operation node" />
-     </td>
-   </tr>
-   <tr>
-     <td style="width: 50%;">
-       Info card showing detailed information for the <code>conv2</code> name scope. The inputs and outputs are combined from the inputs and outputs of the operation nodes inside the name scope. For name scopes no attributes are shown.
-      </td>
+  <tr>
+    <td style="width: 50%;">
+      <img src="https://www.tensorflow.org/images/infocard.png" alt="Info card of a name scope" title="Info card of a name scope" />
+    </td>
+    <td style="width: 50%;">
+      <img src="https://www.tensorflow.org/images/infocard_op.png" alt="Info card of operation node" title="Info card of operation node" />
+    </td>
+  </tr>
+  <tr>
+    <td style="width: 50%;">
+      Info card showing detailed information for the <code>conv2</code> name scope. The inputs and outputs are combined from the inputs and outputs of the operation nodes inside the name scope. For name scopes no attributes are shown.
+    </td>
     <td style="width: 50%;">
       Info card showing detailed information for the <code>DecodeRaw</code> operation node. In addition to inputs and outputs, the card shows the device and the attributes associated with the current operation.
-       </td>
-   </tr>
- </table>
- 
+    </td>
+  </tr>
+</table>
+
 TensorBoard provides several ways to change the visual layout of the graph. This
 doesn't change the graph's computational semantics, but it can bring some
 clarity to the network's structure. By right clicking on a node or pressing
@@ -205,21 +205,21 @@ proportionally to the fraction of devices for the operations inside them.
 The images below give an illustration for a piece of a real-life graph.
 
 <table width="100%;">
-   <tr>
-     <td style="width: 50%;">
-       <img src="https://www.tensorflow.org/images/colorby_structure.png" alt="Color by structure" title="Color by structure" />
-     </td>
-     <td style="width: 50%;">
-       <img src="https://www.tensorflow.org/images/colorby_device.png" alt="Color by device" title="Color by device" />
-     </td>
-   </tr>
-   <tr>
-     <td style="width: 50%;">
+  <tr>
+    <td style="width: 50%;">
+      <img src="https://www.tensorflow.org/images/colorby_structure.png" alt="Color by structure" title="Color by structure" />
+    </td>
+    <td style="width: 50%;">
+      <img src="https://www.tensorflow.org/images/colorby_device.png" alt="Color by device" title="Color by device" />
+    </td>
+  </tr>
+  <tr>
+    <td style="width: 50%;">
       Structure view: The gray nodes have unique structure. The orange <code>conv1</code> and <code>conv2</code> nodes have the same structure, and analogously for nodes with other colors.
-       </td>
-     <td style="width: 50%;">
+    </td>
+    <td style="width: 50%;">
       Device view: Name scopes are colored proportionally to the fraction of devices of the operation nodes inside them. Here, purple means GPU and the green is CPU.
-      </td>
+    </td>
   </tr>
 </table>
 
@@ -231,13 +231,13 @@ size. To include tensor shapes in the `GraphDef` pass the actual graph object
 (as in `sess.graph`) to the `FileWriter` when serializing the graph.
 The images below show the CIFAR-10 model with tensor shape information:
 <table width="100%;">
-   <tr>
-     <td style="width: 100%;">
-       <img src="https://www.tensorflow.org/images/tensor_shapes.png" alt="CIFAR-10 model with tensor shape information" title="CIFAR-10 model with tensor shape information" />
-     </td>
-   </tr>
-   <tr>
-     <td style="width: 100%;">
+  <tr>
+    <td style="width: 100%;">
+      <img src="https://www.tensorflow.org/images/tensor_shapes.png" alt="CIFAR-10 model with tensor shape information" title="CIFAR-10 model with tensor shape information" />
+    </td>
+  </tr>
+  <tr>
+    <td style="width: 100%;">
       CIFAR-10 model with tensor shape information.
        </td>
    </tr>
@@ -254,9 +254,9 @@ for details on how to record summaries.
 Full source is [here](https://www.tensorflow.org/code/tensorflow/examples/tutorials/mnist/mnist_with_summaries.py).
 
 ```python
-   # Train the model, and also write summaries.
-   # Every 10th step, measure test-set accuracy, and write test summaries
-   # All other steps, run train_step on training data, & add training summaries
+  # Train the model, and also write summaries.
+  # Every 10th step, measure test-set accuracy, and write test summaries
+  # All other steps, run train_step on training data, & add training summaries
 
   def feed_dict(train):
     """Make a TensorFlow feed_dict: maps data onto Tensor placeholders."""
@@ -301,15 +301,15 @@ tensor output sizes.
 
 
 <table width="100%;">
-   <tr style="height: 380px">
-     <td>
-       <img src="https://www.tensorflow.org/images/colorby_compute_time.png" alt="Color by compute time" title="Color by compute time"/>
-     </td>
-     <td>
-       <img src="https://www.tensorflow.org/images/run_metadata_graph.png" alt="Run metadata graph" title="Run metadata graph" />
-     </td>
-     <td>
-       <img src="https://www.tensorflow.org/images/run_metadata_infocard.png" alt="Run metadata info card" title="Run metadata info card" />
+  <tr style="height: 380px">
+    <td>
+      <img src="https://www.tensorflow.org/images/colorby_compute_time.png" alt="Color by compute time" title="Color by compute time"/>
+    </td>
+    <td>
+      <img src="https://www.tensorflow.org/images/run_metadata_graph.png" alt="Run metadata graph" title="Run metadata graph" />
+    </td>
+    <td>
+      <img src="https://www.tensorflow.org/images/run_metadata_infocard.png" alt="Run metadata info card" title="Run metadata info card" />
     </td>
   </tr>
 </table>
