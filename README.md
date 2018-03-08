@@ -70,9 +70,9 @@ $ python
 42
 >>> sess.close()
 ```
- 
- ## For more information
- 
+
+## For more information
+
 * [TensorFlow website](https://www.tensorflow.org)
 * [TensorFlow White Papers](https://www.tensorflow.org/about/bib)
 * [TensorFlow Model Zoo](https://github.com/tensorflow/models)
