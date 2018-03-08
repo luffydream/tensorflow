@@ -239,10 +239,10 @@ The images below show the CIFAR-10 model with tensor shape information:
   <tr>
     <td style="width: 100%;">
       CIFAR-10 model with tensor shape information.
-       </td>
-   </tr>
- </table>
- 
+    </td>
+  </tr>
+</table>
+
 ## Runtime statistics
 
 Often it is useful to collect runtime metadata for a run, such as total memory
