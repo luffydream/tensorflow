@@ -20,6 +20,8 @@ from __future__ import print_function
 
 import numpy as np
 
+from tensorflow.core.protobuf import config_pb2
+from tensorflow.python.client import session as session_lib
 from tensorflow.python.framework import constant_op
 from tensorflow.python.framework import dtypes
 from tensorflow.python.framework import ops
@@ -50,6 +52,16 @@ def _make_converter(tf_dtype):
 
 
 class TensorArrayTest(test.TestCase):
+
+  @classmethod
+  def setUpClass(cls):
+    super(TensorArrayTest, cls).setUpClass()
+    cls._workers, _ = test.create_local_cluster(num_workers=3, num_ps=0)
+
+  @classmethod
+  def tearDownClass(cls):
+    super(TensorArrayTest, cls).tearDownClass()
+    session_lib.Session.reset(cls._workers[0].target)
 
   def testTensorArrayWriteRead(self):
     with self.test_session(use_gpu=True) as session:
@@ -1054,7 +1066,10 @@ class TensorArrayTest(test.TestCase):
           infer_shape=True)
       w0 = ta1.split(value, [1, 2])
       r0 = w0.read(0)
-      self.assertAllEqual(r0.get_shape(), tensor_shape.unknown_shape())
+      self.assertEqual(r0.get_shape().ndims, None)
+      self.assertEqual(
+          tensor_shape.TensorShape(
+              ta1.handle.op.get_attr("element_shape")).ndims, None)
 
   def testWriteUnknownShape(self):
     with self.test_session(use_gpu=True):
@@ -1130,10 +1145,11 @@ class TensorArrayTest(test.TestCase):
       # Don't actually perform the pack.  This stores the static shape.
       ta.unstack(array_ops.zeros([0, 3, 5])).mark_used()
       packed = ta.stack()
+      concatenated = ta.concat()
       self.assertAllEqual([0, 3, 5], packed.eval().shape)
       # Concatenating zero tensors along their first dimension gives a
       # first dimension of zero
-      self.assertAllEqual([0, 5], ta.concat().eval().shape)
+      self.assertAllEqual([0, 5], concatenated.eval().shape)
 
   def testTensorArrayEvalEmptyWithDefault(self):
     self._testTensorArrayEvalEmptyWithDefault()
@@ -1194,82 +1210,111 @@ class TensorArrayTest(test.TestCase):
       self.assertAllEqual(expected_grad, grad_vals[0])
 
   def testTensorArrayGetsDeviceFromFirstWrite(self):
-    with ops.device("/gpu:1"):
+    with ops.device("/job:worker/task:0/cpu:0"):
+      # this initial device will be ignored.
       ta = tensor_array_ops.TensorArray(dtype=dtypes.float32, size=2)
-    # parent device was ignored when creating the TensorArray
-    self.assertEqual(ta.handle.device, "")
-    self.assertEqual(ta.flow.device, "")
-    with ops.device("/gpu:0"):
-      # the first write sets the op's device
+    with ops.device("/job:worker/task:1/cpu:0"):
+      # the first write sets the op's device.
       ta = ta.write(0, 1.0)
-    self.assertTrue("gpu:0" in ta.handle.device.lower())
-    self.assertTrue("gpu:0" in ta.flow.device.lower())
-    with ops.device("/gpu:1"):
-      # subsequent writes do not modify the op's device
+    with ops.device("/job:worker/task:2/cpu:0"):
+      # subsequent writes do not modify the op's device.
       ta = ta.write(1, 1.0)
-    self.assertTrue("gpu:0" in ta.handle.device.lower())
-    self.assertTrue("gpu:0" in ta.flow.device.lower())
 
+    # The gradient TA will sit on the same device as the forward TA.
     ta_grad = ta.grad("grad")
-    self.assertTrue("gpu:0" in ta_grad.handle.device.lower())
-    self.assertTrue("gpu:0" in ta_grad.flow.device.lower())
+    flows = [ta.flow, ta_grad.flow]
 
     # Similar tests for unpack and split
-    ta = tensor_array_ops.TensorArray(dtype=dtypes.float32, size=2)
-    self.assertEqual(ta.handle.device, "")
-    self.assertEqual(ta.flow.device, "")
-    with ops.device("/gpu:0"):
+    with ops.device("/job:worker/task:0/cpu:0"):
+      ta = tensor_array_ops.TensorArray(dtype=dtypes.float32, size=3)
+    with ops.device("/job:worker/task:1/cpu:0"):
       ta = ta.unstack([1.0, 2.0])
-    self.assertTrue("gpu:0" in ta.handle.device.lower())
-    self.assertTrue("gpu:0" in ta.flow.device.lower())
-    with ops.device("/gpu:1"):
-      ta = ta.unstack([1.0, 2.0])
-    self.assertTrue("gpu:0" in ta.handle.device.lower())
-    self.assertTrue("gpu:0" in ta.flow.device.lower())
+    with ops.device("/job:worker/task:2/cpu:0"):
+      ta = ta.write(2, 3.0)
+    flows.append(ta.flow)
 
-    ta = tensor_array_ops.TensorArray(dtype=dtypes.float32, size=2)
-    self.assertEqual(ta.handle.device, "")
-    self.assertEqual(ta.flow.device, "")
-    with ops.device("/gpu:0"):
+    with ops.device("/job:worker/task:0/cpu:0"):
+      ta = tensor_array_ops.TensorArray(dtype=dtypes.float32, size=2)
+    with ops.device("/job:worker/task:1/cpu:0"):
       ta = ta.split([1.0, 2.0], [1, 1])
-    self.assertTrue("gpu:0" in ta.handle.device.lower())
-    self.assertTrue("gpu:0" in ta.flow.device.lower())
-    with ops.device("/gpu:1"):
-      ta = ta.split([1.0, 2.0], [1, 1])
-    self.assertTrue("gpu:0" in ta.handle.device.lower())
-    self.assertTrue("gpu:0" in ta.flow.device.lower())
+    flows.append(ta.flow)
+
+    session = session_lib.Session(self._workers[0].target)
+
+    run_options = config_pb2.RunOptions(
+        trace_level=config_pb2.RunOptions.FULL_TRACE)
+    run_metadata = config_pb2.RunMetadata()
+
+    session.run(flows, options=run_options, run_metadata=run_metadata)
+    self.assertTrue(run_metadata.HasField("step_stats"))
+    dev_stats = {d.device: d.node_stats
+                 for d in run_metadata.step_stats.dev_stats}
+    for d in dev_stats:
+      if "/task:1/" in d:
+        self.assertTrue(
+            [s for s in dev_stats[d] if "/TensorArray" in s.node_name])
+      else:
+        self.assertFalse(
+            [s for s in dev_stats[d] if "/TensorArray" in s.node_name])
 
   def testTensorArrayGetsDeviceFromFirstWriteInWhileLoop(self):
-    ta = tensor_array_ops.TensorArray(dtype=dtypes.float32, size=2)
+    with ops.device("/job:worker/task:0/cpu:0"):
+      ta = tensor_array_ops.TensorArray(dtype=dtypes.float32, size=2)
 
     def _body(i, ta_i):
-      with ops.device("/gpu:0"):
-        return i + 1, ta_i.write(i, 0.0)
-
-    self.assertEqual(ta.handle.device, "")
-    self.assertEqual(ta.flow.device, "")
+      with ops.device("/job:worker/task:1/cpu:0"):
+        return i + 1, ta_i.write(i, constant_op.constant(0.0))
 
     _, ta_out = control_flow_ops.while_loop(
         lambda i, ta: i < 2, _body, loop_vars=[0, ta])
 
-    self.assertTrue("gpu:0" in ta_out.handle.device.lower())
-    self.assertTrue("gpu:0" in ta.handle.device.lower())
+    session = session_lib.Session(self._workers[0].target)
 
-  def testTensorArrayLazyDeviceSettingDoesNotConfuseInitialAccess(self):
-    with self.test_session(use_gpu=True) as session:
-      ta = tensor_array_ops.TensorArray(dtype=dtypes.float32, size=2)
-      self.assertEqual(ta.handle.device, "")
+    run_options = config_pb2.RunOptions(
+        trace_level=config_pb2.RunOptions.FULL_TRACE)
+    run_metadata = config_pb2.RunMetadata()
 
-      with ops.device("/cpu:0"):
-        size = ta.size()
-      with ops.device("/gpu:0"):
-        ta = ta.write(0, 0.0)
+    session.run(ta_out.flow, options=run_options, run_metadata=run_metadata)
+    self.assertTrue(run_metadata.HasField("step_stats"))
+    dev_stats = {d.device: d.node_stats
+                 for d in run_metadata.step_stats.dev_stats}
+    for d in dev_stats:
+      if "/task:1/" in d:
+        self.assertTrue(
+            [s for s in dev_stats[d] if "/TensorArray" in s.node_name])
+      else:
+        self.assertFalse(
+            [s for s in dev_stats[d] if "/TensorArray" in s.node_name])
 
-      self.assertTrue("gpu:0" in ta.handle.device.lower())
+  def testTensorArrayDisabledColocateWithFirstWriteCall(self):
+    with ops.device("/job:worker/task:0/cpu:0"):
+      ta = tensor_array_ops.TensorArray(
+          dtype=dtypes.float32, size=2, colocate_with_first_write_call=False)
 
-      # This should use the TensorArray on /gpu:0
-      size_value, _ = session.run((size, ta.flow))
-      self.assertEqual(2, size_value)
+    def _body(i, ta_i):
+      with ops.device("/job:worker/task:1/cpu:0"):
+        return i + 1, ta_i.write(i, constant_op.constant(0.0))
+
+    _, ta_out = control_flow_ops.while_loop(
+        lambda i, ta: i < 2, _body, loop_vars=[0, ta])
+
+    session = session_lib.Session(self._workers[0].target)
+
+    run_options = config_pb2.RunOptions(
+        trace_level=config_pb2.RunOptions.FULL_TRACE)
+    run_metadata = config_pb2.RunMetadata()
+
+    session.run(ta_out.flow, options=run_options, run_metadata=run_metadata)
+    self.assertTrue(run_metadata.HasField("step_stats"))
+    dev_stats = {d.device: list(d.node_stats)
+                 for d in run_metadata.step_stats.dev_stats}
+    for d in dev_stats:
+      if "/task:0/" in d and "CPU" in d:  # Skip any GPU node stats
+        self.assertTrue(
+            [s for s in dev_stats[d] if "/TensorArray" in s.node_name])
+      else:
+        self.assertFalse(
+            [s for s in dev_stats[d] if "/TensorArray" in s.node_name])
 
   def testTensorArrayIdentity(self):
     with self.test_session(use_gpu=True) as session:
@@ -1316,6 +1361,24 @@ class TensorArrayTest(test.TestCase):
       self.assertEqual(read1_v, 1)
       self.assertEqual(size0_v, 2)
       self.assertEqual(size1_v, 4)
+
+  def testTensorArrayGradYsInCorrectScope(self):
+    n_time = 1
+    n_dim = 1
+    x = constant_op.constant([[1.42]])
+    dy = constant_op.constant([[2.42]])
+
+    ta = tensor_array_ops.TensorArray(
+        dtypes.float32, size=n_time, element_shape=[n_dim])
+    for t in range(n_time):
+      ta = ta.write(index=t, value=x[t])
+      y = ta.stack()
+      # dy is outside of the gradients name scope; tf.gradients must
+      # wrap it in the correct name scope.
+      dx, = gradients_impl.gradients(ys=[y], xs=[x], grad_ys=[dy])
+      with self.test_session(use_gpu=True) as sess:
+        vdx, vdy = sess.run([dx, dy])
+      self.assertAllClose(vdx, vdy)
 
 
 if __name__ == "__main__":
